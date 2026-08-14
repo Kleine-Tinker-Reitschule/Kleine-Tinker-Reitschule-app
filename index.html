@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#264e69" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tinker" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Kleine Tinker Reitschule</title>
+  <style>
+    :root{
+      --blue:#264e69; --blue2:#527d96; --beige:#f2eadf; --card:#fffaf4;
+      --line:#d8cbbb; --text:#24333b; --muted:#6f7a80; --green:#4f8b66;
+      --orange:#c88835; --red:#b44b4b; --shadow:0 8px 28px rgba(50,42,32,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--beige);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{padding:18px 18px 10px;position:sticky;top:0;background:rgba(242,234,223,.94);backdrop-filter:blur(14px);z-index:3}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{width:58px;height:58px;border-radius:16px;object-fit:cover;box-shadow:var(--shadow)}
+    .brand h1{font-size:21px;margin:0;color:var(--blue)}
+    .brand small{color:var(--muted)}
+    main{padding:10px 16px 92px;max-width:920px;margin:auto}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+    .tile,.panel{background:var(--card);border:1px solid rgba(38,78,105,.10);border-radius:20px;box-shadow:var(--shadow)}
+    .tile{padding:16px;min-height:116px}
+    .tile .n{font-size:32px;font-weight:800;margin-top:8px}
+    .tile .l{font-size:13px;color:var(--muted)}
+    .tile.orange .n{color:var(--orange)} .tile.red .n{color:var(--red)} .tile.green .n{color:var(--green)}
+    .panel{padding:16px;margin-top:14px}
+    h2{font-size:18px;margin:0 0 12px;color:var(--blue)}
+    h3{font-size:15px;margin:14px 0 8px}
+    nav{position:fixed;left:0;right:0;bottom:0;background:#fffaf6;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 6px calc(7px + env(safe-area-inset-bottom));z-index:5}
+    nav button{border:0;background:none;padding:8px 4px;color:var(--muted);font-size:12px}
+    nav button.active{color:var(--blue);font-weight:700}
+    button.primary,button.secondary,button.danger{border:0;border-radius:13px;padding:11px 14px;font-weight:700}
+    button.primary{background:var(--blue);color:white}
+    button.secondary{background:#e5eef2;color:var(--blue)}
+    button.danger{background:#f7e2e2;color:var(--red)}
+    input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:white;font:inherit}
+    label{font-size:12px;color:var(--muted);display:block;margin:8px 0 5px}
+    .row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
+    .list{display:flex;flex-direction:column;gap:9px}
+    .person{background:white;border:1px solid #eadfd4;border-radius:15px;padding:12px;display:flex;align-items:center;gap:12px}
+    .person .name{font-weight:700}.person .meta{font-size:12px;color:var(--muted);margin-top:2px}
+    .balance{margin-left:auto;min-width:44px;text-align:center;font-size:20px;font-weight:800}
+    .b2{color:var(--orange)} .b1,.b0{color:var(--red)} .bok{color:var(--green)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eef3f5;color:var(--blue)}
+    .hidden{display:none!important}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .toolbar button{flex:1;min-width:120px}
+    .notice{font-size:12px;color:var(--muted);line-height:1.4}
+    dialog{border:0;border-radius:20px;padding:0;max-width:520px;width:calc(100% - 28px);box-shadow:0 24px 70px rgba(0,0,0,.24)}
+    dialog::backdrop{background:rgba(0,0,0,.28)}
+    .modal{padding:18px;background:var(--card)}
+    .modal .actions{display:flex;gap:8px;margin-top:14px}.modal .actions>*{flex:1}
+    .weekday{font-weight:800;color:var(--blue);margin:16px 0 8px}
+    .statusline{display:grid;grid-template-columns:1fr 170px;gap:8px;align-items:center}
+    @media(max-width:520px){.statusline{grid-template-columns:1fr}.row{flex-direction:column;align-items:stretch}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="Logo">
+    <div><h1>Kleine Tinker Reitschule</h1><small>Reitkarten & Wochenverwaltung</small></div>
+  </div>
+</header>
+
+<main>
+<section id="home">
+  <div class="grid">
+    <div class="tile green"><div class="l">3+ Reststunden</div><div class="n" id="countOk">0</div></div>
+    <div class="tile orange"><div class="l">2 Reststunden</div><div class="n" id="count2">0</div></div>
+    <div class="tile red"><div class="l">1 Reststunde</div><div class="n" id="count1">0</div></div>
+    <div class="tile red"><div class="l">0 / Minus</div><div class="n" id="count0">0</div></div>
+  </div>
+  <div class="panel">
+    <h2>Heute wichtig</h2>
+    <div id="alerts" class="list"></div>
+  </div>
+</section>
+
+<section id="customers" class="hidden">
+  <div class="panel">
+    <div class="row"><div><h2>Kunden</h2></div><button class="primary" onclick="openCustomer()">+ Kunde</button></div>
+    <input id="search" placeholder="Name suchen…" oninput="renderCustomers()">
+    <div id="customerList" class="list" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<section id="week" class="hidden">
+  <div class="panel">
+    <h2>Tagesbuchung</h2>
+    <label>Datum</label>
+    <input id="bookingDate" type="date" onchange="renderDay()">
+    <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt geändert werden.</p>
+    <div id="dayList"></div>
+  </div>
+</section>
+
+<section id="backup" class="hidden">
+  <div class="panel">
+    <h2>Sicherung</h2>
+    <p class="notice">Die Daten liegen lokal auf diesem Gerät. Exportiere regelmäßig eine Sicherungsdatei.</p>
+    <div class="toolbar">
+      <button class="primary" onclick="exportData()">Backup herunterladen</button>
+      <button class="secondary" onclick="document.getElementById('importFile').click()">Backup einlesen</button>
+      <input id="importFile" class="hidden" type="file" accept="application/json" onchange="importData(event)">
+    </div>
+  </div>
+</section>
+</main>
+
+<nav>
+  <button class="active" data-tab="home" onclick="showTab('home',this)">Start</button>
+  <button data-tab="customers" onclick="showTab('customers',this)">Kunden</button>
+  <button data-tab="week" onclick="showTab('week',this)">Tage</button>
+  <button data-tab="backup" onclick="showTab('backup',this)">Backup</button>
+</nav>
+
+<dialog id="customerDialog">
+  <div class="modal">
+    <h2 id="customerTitle">Kunde</h2>
+    <input id="cid" type="hidden">
+    <label>Name</label><input id="cname">
+    <div class="row">
+      <div><label>Reittag</label>
+        <select id="cday"><option>Montag</option><option>Dienstag</option><option>Mittwoch</option><option>Donnerstag</option><option>Freitag</option><option>Samstag</option></select>
+      </div>
+      <div><label>Reitart</label>
+        <select id="ctype"><option>Gruppe</option><option>Erwachsene</option><option>Mutter-Kind</option><option>Behindertenreiten</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Kartentyp</label><select id="ccard"><option value="5">5er-Karte</option><option value="10">10er-Karte</option></select></div>
+      <div><label>Reststunden</label><input id="cbalance" type="number" step="1"></div>
+    </div>
+    <h3>Neue Karte buchen</h3>
+    <div class="row">
+      <div><label>Kaufdatum</label><input id="purchaseDate" type="date"></div>
+      <div><label>Karte</label><select id="purchaseType"><option value="5">5er-Karte</option><option value="10">10er-Karte</option></select></div>
+    </div>
+    <button class="secondary" style="width:100%;margin-top:8px" onclick="addCard()">Karte hinzufügen</button>
+    <div class="actions"><button class="danger" onclick="deleteCustomer()">Löschen</button><button class="secondary" onclick="closeCustomer()">Abbrechen</button><button class="primary" onclick="saveCustomer()">Speichern</button></div>
+  </div>
+</dialog>
+
+<script>
+const KEY="tinker_webapp_v1";
+let db=load();
+
+function blankDB(){ return {customers:[], bookings:[]}; }
+function load(){ try{return JSON.parse(localStorage.getItem(KEY))||blankDB()}catch(e){return blankDB()} }
+function save(){ localStorage.setItem(KEY,JSON.stringify(db)); renderAll(); }
+function uid(){ return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
+
+function showTab(id,btn){
+  document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  if(id==="week") renderDay();
+}
+
+function balanceClass(n){ if(n<=0)return "b0"; if(n===1)return "b1"; if(n===2)return "b2"; return "bok"; }
+function renderDashboard(){
+  const active=db.customers.filter(c=>c.active!==false);
+  countOk.textContent=active.filter(c=>c.balance>=3).length;
+  count2.textContent=active.filter(c=>c.balance===2).length;
+  count1.textContent=active.filter(c=>c.balance===1).length;
+  count0.textContent=active.filter(c=>c.balance<=0).length;
+  const urgent=active.filter(c=>c.balance<=2).sort((a,b)=>a.balance-b.balance||a.name.localeCompare(b.name));
+  alerts.innerHTML=urgent.length?urgent.map(personHTML).join(""):'<div class="notice">Aktuell niemand bei 2 oder weniger Reststunden.</div>';
+}
+function personHTML(c){
+  return `<div class="person" onclick="openCustomer('${c.id}')"><div><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.day)} · ${esc(c.type)}</div></div><div class="balance ${balanceClass(c.balance)}">${c.balance}</div></div>`;
+}
+function renderCustomers(){
+  const q=(search?.value||"").toLowerCase();
+  customerList.innerHTML=db.customers.filter(c=>c.name.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name)).map(personHTML).join("");
+}
+function renderAll(){ renderDashboard(); if(window.customerList)renderCustomers(); if(!document.getElementById("week").classList.contains("hidden"))renderDay(); }
+
+function openCustomer(id){
+  const c=db.customers.find(x=>x.id===id);
+  cid.value=c?.id||"";
+  cname.value=c?.name||"";
+  cday.value=c?.day||"Montag";
+  ctype.value=c?.type||"Gruppe";
+  ccard.value=String(c?.cardType||5);
+  cbalance.value=c?.balance??0;
+  purchaseDate.value=new Date().toISOString().slice(0,10);
+  customerTitle.textContent=c?"Kunde bearbeiten":"Neuer Kunde";
+  customerDialog.showModal();
+}
+function closeCustomer(){ customerDialog.close(); }
+function saveCustomer(){
+  const existing=db.customers.find(x=>x.id===cid.value);
+  const obj={id:existing?.id||uid(),name:cname.value.trim(),day:cday.value,type:ctype.value,cardType:+ccard.value,balance:+cbalance.value||0,active:true,cards:existing?.cards||[]};
+  if(!obj.name)return alert("Bitte Namen eintragen.");
+  if(existing) Object.assign(existing,obj); else db.customers.push(obj);
+  save(); closeCustomer();
+}
+function deleteCustomer(){
+  if(!cid.value)return closeCustomer();
+  if(!confirm("Kunden wirklich löschen?"))return;
+  db.customers=db.customers.filter(c=>c.id!==cid.value); save(); closeCustomer();
+}
+function addCard(){
+  if(!cid.value) return alert("Bitte den Kunden zuerst speichern.");
+  const c=db.customers.find(x=>x.id===cid.value); if(!c)return;
+  const amount=+purchaseType.value;
+  const date=purchaseDate.value;
+  if(!date)return alert("Kaufdatum auswählen.");
+  c.cards ||= [];
+  c.cards.push({id:uid(),date,amount,type:amount});
+  c.cardType=amount;
+  c.balance += amount;
+  cbalance.value=c.balance;
+  save();
+  alert(`+${amount} Stunden gebucht.`);
+}
+
+const dayMap={0:"Sonntag",1:"Montag",2:"Dienstag",3:"Mittwoch",4:"Donnerstag",5:"Freitag",6:"Samstag"};
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+bookingDate.value=todayISO();
+
+function renderDay(){
+  const date=bookingDate.value||todayISO();
+  const wd=dayMap[new Date(date+"T12:00:00").getDay()];
+  const people=db.customers.filter(c=>c.active!==false && c.day===wd).sort((a,b)=>a.name.localeCompare(b.name));
+  dayList.innerHTML=`<div class="weekday">${wd}</div>` + (people.length?people.map(c=>dayRow(c,date)).join(""):'<div class="notice">Keine Kunden an diesem Tag.</div>');
+}
+function dayRow(c,date){
+  const b=db.bookings.find(x=>x.customerId===c.id && x.date===date);
+  const statuses=["Geritten","Rechtzeitig abgesagt","Zu spät abgesagt","Unentschuldigt","Urlaub Reitschule","G – geschlossen"];
+  return `<div class="person" style="display:block;margin-bottom:8px">
+    <div class="statusline">
+      <div><div class="name">${esc(c.name)} <span class="badge">${c.balance} Std.</span></div><div class="meta">${esc(c.type)} · ${c.cardType}er-Karte</div></div>
+      <select onchange="bookStatus('${c.id}','${date}',this.value)">
+        <option value="">${b?"Gespeichert: "+b.status:"Status wählen…"}</option>
+        ${statuses.map(s=>`<option ${b?.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+    </div>
+    ${b?`<div class="notice" style="margin-top:6px">Gebucht: ${b.before} → ${b.after}. Änderung möglich; die alte Buchung wird zuerst zurückgerechnet.</div>`:""}
+  </div>`;
+}
+function isSpecial(c){ return ["Erwachsene","Mutter-Kind","Behindertenreiten"].includes(c.type); }
+function currentCardStart(c,date){
+  const cards=(c.cards||[]).filter(x=>x.date<=date).sort((a,b)=>a.date.localeCompare(b.date));
+  return cards.length?cards[cards.length-1].date:null;
+}
+function freeQuota(c,date){
+  const cards=(c.cards||[]).filter(x=>x.date<=date).sort((a,b)=>a.date.localeCompare(b.date));
+  const last=cards[cards.length-1];
+  const type=last?.type||c.cardType||5;
+  return type===10?2:1;
+}
+function usedFree(c,date){
+  const start=currentCardStart(c,date);
+  return db.bookings.filter(b=>b.customerId===c.id && b.date<date && (!start||b.date>=start) && b.status==="Rechtzeitig abgesagt" && b.delta===0).length;
+}
+function computeDelta(c,status,date,before){
+  if(status==="G – geschlossen") return 0;
+  if(status==="Rechtzeitig abgesagt"){
+    if(isSpecial(c) && before>=1 && usedFree(c,date)<freeQuota(c,date)) return 0;
+    return -1;
+  }
+  return -1;
+}
+function bookStatus(customerId,date,status){
+  if(!status)return;
+  const c=db.customers.find(x=>x.id===customerId); if(!c)return;
+  const existing=db.bookings.find(x=>x.customerId===customerId && x.date===date);
+  if(existing){
+    c.balance -= existing.delta; // rollback previous effect
+    db.bookings=db.bookings.filter(x=>x.id!==existing.id);
+  }
+  const before=c.balance;
+  const delta=computeDelta(c,status,date,before);
+  c.balance += delta;
+  db.bookings.push({id:uid(),customerId,date,status,before,after:c.balance,delta});
+  save();
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`tinker-backup-${todayISO()}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function importData(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const x=JSON.parse(r.result); if(!x.customers||!x.bookings)throw 0; db=x; save(); alert("Backup eingelesen."); }catch{alert("Die Datei ist kein gültiges Tinker-Backup.");}};
+  r.readAsText(f);
+}
+function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+renderAll();
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
+</script>
+</body>
+</html>
