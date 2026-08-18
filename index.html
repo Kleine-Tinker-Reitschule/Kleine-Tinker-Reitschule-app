@@ -27,7 +27,7 @@
     .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
     @media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
     .tile,.panel{background:var(--card);border:1px solid rgba(38,78,105,.10);border-radius:20px;box-shadow:var(--shadow)}
-    .tile{padding:16px;min-height:116px}
+    .tile{padding:16px;min-height:116px;cursor:pointer}.tile.selected{outline:3px solid rgba(38,78,105,.28)}
     .tile .n{font-size:32px;font-weight:800;margin-top:8px}
     .tile .l{font-size:13px;color:var(--muted)}
     .tile.orange .n{color:var(--orange)} .tile.red .n{color:var(--red)} .tile.green .n{color:var(--green)}
@@ -76,13 +76,13 @@
 <main>
 <section id="home">
   <div class="grid">
-    <div class="tile green"><div class="l">3+ Reststunden</div><div class="n" id="countOk">0</div></div>
-    <div class="tile orange"><div class="l">2 Reststunden</div><div class="n" id="count2">0</div></div>
-    <div class="tile red"><div class="l">1 Reststunde</div><div class="n" id="count1">0</div></div>
-    <div class="tile red"><div class="l">0 / Minus</div><div class="n" id="count0">0</div></div>
+    <div class="tile green" onclick="showBalanceGroup('ok',this)"><div class="l">3+ Reststunden</div><div class="n" id="countOk">0</div></div>
+    <div class="tile orange" onclick="showBalanceGroup('two',this)"><div class="l">2 Reststunden</div><div class="n" id="count2">0</div></div>
+    <div class="tile red" onclick="showBalanceGroup('one',this)"><div class="l">1 Reststunde</div><div class="n" id="count1">0</div></div>
+    <div class="tile red" onclick="showBalanceGroup('zero',this)"><div class="l">0 / Minus</div><div class="n" id="count0">0</div></div>
   </div>
   <div class="panel">
-    <h2>Heute wichtig</h2>
+    <h2 id="alertsTitle">Heute wichtig</h2>
     <div id="alerts" class="list"></div>
   </div>
 </section>
@@ -210,18 +210,72 @@ function balanceClass(n){
 
 function renderDashboard(){
   const active=db.customers.filter(c=>c.active!==false);
+
   $("countOk").textContent=active.filter(c=>Number(c.balance)>=3).length;
   $("count2").textContent=active.filter(c=>Number(c.balance)===2).length;
   $("count1").textContent=active.filter(c=>Number(c.balance)===1).length;
   $("count0").textContent=active.filter(c=>Number(c.balance)<=0).length;
 
-  const urgent=active
-    .filter(c=>Number(c.balance)<=2)
-    .sort((a,b)=>Number(a.balance)-Number(b.balance)||a.name.localeCompare(b.name));
+  if(!window.currentBalanceGroup){
+    const urgent=active
+      .filter(c=>Number(c.balance)<=2)
+      .sort((a,b)=>Number(a.balance)-Number(b.balance)||a.name.localeCompare(b.name));
 
-  $("alerts").innerHTML=urgent.length
-    ? urgent.map(personHTML).join("")
-    : '<div class="notice">Aktuell niemand bei 2 oder weniger Reststunden.</div>';
+    $("alertsTitle").textContent="Heute wichtig";
+    $("alerts").innerHTML=urgent.length
+      ? urgent.map(personHTML).join("")
+      : '<div class="notice">Aktuell niemand bei 2 oder weniger Reststunden.</div>';
+  } else {
+    renderBalanceGroup();
+  }
+}
+
+function showBalanceGroup(group, tile){
+  window.currentBalanceGroup=group;
+
+  document.querySelectorAll(".tile").forEach(t=>t.classList.remove("selected"));
+  if(tile) tile.classList.add("selected");
+
+  renderBalanceGroup();
+}
+
+function renderBalanceGroup(){
+  const active=db.customers.filter(c=>c.active!==false);
+  let list=[];
+  let title="";
+
+  if(window.currentBalanceGroup==="ok"){
+    title="3+ Reststunden";
+    list=active
+      .filter(c=>Number(c.balance)>=3)
+      .sort((a,b)=>Number(b.balance)-Number(a.balance)||a.name.localeCompare(b.name));
+  }
+
+  if(window.currentBalanceGroup==="two"){
+    title="2 Reststunden";
+    list=active
+      .filter(c=>Number(c.balance)===2)
+      .sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
+  if(window.currentBalanceGroup==="one"){
+    title="1 Reststunde";
+    list=active
+      .filter(c=>Number(c.balance)===1)
+      .sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
+  if(window.currentBalanceGroup==="zero"){
+    title="0 / Minus";
+    list=active
+      .filter(c=>Number(c.balance)<=0)
+      .sort((a,b)=>Number(a.balance)-Number(b.balance)||a.name.localeCompare(b.name));
+  }
+
+  $("alertsTitle").textContent=title;
+  $("alerts").innerHTML=list.length
+    ? list.map(personHTML).join("")
+    : '<div class="notice">In dieser Gruppe ist aktuell niemand.</div>';
 }
 
 function personHTML(c){
