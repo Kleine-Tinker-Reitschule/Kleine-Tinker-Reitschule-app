@@ -54,6 +54,8 @@
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
     .toolbar button{flex:1;min-width:120px}
     .notice{font-size:12px;color:var(--muted);line-height:1.4}
+    .history{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+    .history-item{font-size:12px;padding:7px 0;border-bottom:1px solid #eee2d7}
     dialog{border:0;border-radius:20px;padding:0;max-width:520px;width:calc(100% - 28px);box-shadow:0 24px 70px rgba(0,0,0,.24)}
     dialog::backdrop{background:rgba(0,0,0,.28)}
     .modal{padding:18px;background:var(--card)}
@@ -88,7 +90,7 @@
 <section id="customers" class="hidden">
   <div class="panel">
     <div class="row"><div><h2>Kunden</h2></div><button class="primary" onclick="openCustomer()">+ Kunde</button></div>
-    <input id="search" placeholder="Name suchen…" oninput="renderCustomers()">
+    <input id="search" placeholder="Name suchenâ¦" oninput="renderCustomers()">
     <div id="customerList" class="list" style="margin-top:12px"></div>
   </div>
 </section>
@@ -98,7 +100,7 @@
     <h2>Tagesbuchung</h2>
     <label>Datum</label>
     <input id="bookingDate" type="date" onchange="renderDay()">
-    <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt geändert werden.</p>
+    <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt geÃ¤ndert werden.</p>
     <div id="dayList"></div>
   </div>
 </section>
@@ -106,7 +108,7 @@
 <section id="backup" class="hidden">
   <div class="panel">
     <h2>Sicherung</h2>
-    <p class="notice">Die Daten liegen lokal auf diesem Gerät. Exportiere regelmäßig eine Sicherungsdatei.</p>
+    <p class="notice">Die Daten liegen lokal auf diesem GerÃ¤t. Exportiere regelmÃ¤Ãig eine Sicherungsdatei.</p>
     <div class="toolbar">
       <button class="primary" onclick="exportData()">Backup herunterladen</button>
       <button class="secondary" onclick="document.getElementById('importFile').click()">Backup einlesen</button>
@@ -145,8 +147,15 @@
       <div><label>Kaufdatum</label><input id="purchaseDate" type="date"></div>
       <div><label>Karte</label><select id="purchaseType"><option value="5">5er-Karte</option><option value="10">10er-Karte</option></select></div>
     </div>
-    <button class="secondary" style="width:100%;margin-top:8px" onclick="addCard()">Karte hinzufügen</button>
-    <div class="actions"><button class="danger" onclick="deleteCustomer()">Löschen</button><button class="secondary" onclick="closeCustomer()">Abbrechen</button><button class="primary" onclick="saveCustomer()">Speichern</button></div>
+    <button class="secondary" style="width:100%;margin-top:8px" onclick="addCard()">Karte hinzufÃ¼gen</button>
+
+    <div id="cardHistory" class="history"></div>
+
+    <div class="actions">
+      <button class="danger" onclick="deleteCustomer()">LÃ¶schen</button>
+      <button class="secondary" onclick="closeCustomer()">Abbrechen</button>
+      <button class="primary" onclick="saveCustomer()">Speichern</button>
+    </div>
   </div>
 </dialog>
 
@@ -154,155 +163,388 @@
 const KEY="tinker_webapp_v1";
 let db=load();
 
+function $(id){ return document.getElementById(id); }
+
 function blankDB(){ return {customers:[], bookings:[]}; }
-function load(){ try{return JSON.parse(localStorage.getItem(KEY))||blankDB()}catch(e){return blankDB()} }
-function save(){ localStorage.setItem(KEY,JSON.stringify(db)); renderAll(); }
-function uid(){ return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
+
+function load(){
+  try{
+    const data=JSON.parse(localStorage.getItem(KEY))||blankDB();
+    data.customers=Array.isArray(data.customers)?data.customers:[];
+    data.bookings=Array.isArray(data.bookings)?data.bookings:[];
+    data.customers.forEach(c=>{
+      c.balance=Number(c.balance)||0;
+      c.cardType=Number(c.cardType)||5;
+      c.cards=Array.isArray(c.cards)?c.cards:[];
+    });
+    return data;
+  }catch(e){
+    return blankDB();
+  }
+}
+
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(db));
+  renderAll();
+}
+
+function uid(){
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2);
+}
 
 function showTab(id,btn){
   document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
+  $(id).classList.remove("hidden");
   document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
   if(id==="week") renderDay();
 }
 
-function balanceClass(n){ if(n<=0)return "b0"; if(n===1)return "b1"; if(n===2)return "b2"; return "bok"; }
+function balanceClass(n){
+  n=Number(n)||0;
+  if(n<=0)return "b0";
+  if(n===1)return "b1";
+  if(n===2)return "b2";
+  return "bok";
+}
+
 function renderDashboard(){
   const active=db.customers.filter(c=>c.active!==false);
-  countOk.textContent=active.filter(c=>c.balance>=3).length;
-  count2.textContent=active.filter(c=>c.balance===2).length;
-  count1.textContent=active.filter(c=>c.balance===1).length;
-  count0.textContent=active.filter(c=>c.balance<=0).length;
-  const urgent=active.filter(c=>c.balance<=2).sort((a,b)=>a.balance-b.balance||a.name.localeCompare(b.name));
-  alerts.innerHTML=urgent.length?urgent.map(personHTML).join(""):'<div class="notice">Aktuell niemand bei 2 oder weniger Reststunden.</div>';
+  $("countOk").textContent=active.filter(c=>Number(c.balance)>=3).length;
+  $("count2").textContent=active.filter(c=>Number(c.balance)===2).length;
+  $("count1").textContent=active.filter(c=>Number(c.balance)===1).length;
+  $("count0").textContent=active.filter(c=>Number(c.balance)<=0).length;
+
+  const urgent=active
+    .filter(c=>Number(c.balance)<=2)
+    .sort((a,b)=>Number(a.balance)-Number(b.balance)||a.name.localeCompare(b.name));
+
+  $("alerts").innerHTML=urgent.length
+    ? urgent.map(personHTML).join("")
+    : '<div class="notice">Aktuell niemand bei 2 oder weniger Reststunden.</div>';
 }
+
 function personHTML(c){
-  return `<div class="person" onclick="openCustomer('${c.id}')"><div><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.day)} · ${esc(c.type)}</div></div><div class="balance ${balanceClass(c.balance)}">${c.balance}</div></div>`;
+  const bal=Number(c.balance)||0;
+  return `<div class="person" onclick="openCustomer('${c.id}')">
+    <div>
+      <div class="name">${esc(c.name)}</div>
+      <div class="meta">${esc(c.day)} Â· ${esc(c.type)}</div>
+    </div>
+    <div class="balance ${balanceClass(bal)}">${bal}</div>
+  </div>`;
 }
+
 function renderCustomers(){
-  const q=(search?.value||"").toLowerCase();
-  customerList.innerHTML=db.customers.filter(c=>c.name.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name)).map(personHTML).join("");
+  const q=($("search").value||"").toLowerCase();
+  $("customerList").innerHTML=db.customers
+    .filter(c=>(c.name||"").toLowerCase().includes(q))
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(personHTML)
+    .join("");
 }
-function renderAll(){ renderDashboard(); if(window.customerList)renderCustomers(); if(!document.getElementById("week").classList.contains("hidden"))renderDay(); }
+
+function renderAll(){
+  renderDashboard();
+  renderCustomers();
+  if(!$("week").classList.contains("hidden")) renderDay();
+}
 
 function openCustomer(id){
   const c=db.customers.find(x=>x.id===id);
-  cid.value=c?.id||"";
-  cname.value=c?.name||"";
-  cday.value=c?.day||"Montag";
-  ctype.value=c?.type||"Gruppe";
-  ccard.value=String(c?.cardType||5);
-  cbalance.value=c?.balance??0;
-  purchaseDate.value=new Date().toISOString().slice(0,10);
-  customerTitle.textContent=c?"Kunde bearbeiten":"Neuer Kunde";
-  customerDialog.showModal();
-}
-function closeCustomer(){ customerDialog.close(); }
-function saveCustomer(){
-  const existing=db.customers.find(x=>x.id===cid.value);
-  const obj={id:existing?.id||uid(),name:cname.value.trim(),day:cday.value,type:ctype.value,cardType:+ccard.value,balance:+cbalance.value||0,active:true,cards:existing?.cards||[]};
-  if(!obj.name)return alert("Bitte Namen eintragen.");
-  if(existing) Object.assign(existing,obj); else db.customers.push(obj);
-  save(); closeCustomer();
-}
-function deleteCustomer(){
-  if(!cid.value)return closeCustomer();
-  if(!confirm("Kunden wirklich löschen?"))return;
-  db.customers=db.customers.filter(c=>c.id!==cid.value); save(); closeCustomer();
-}
-function addCard(){
-  if(!cid.value) return alert("Bitte den Kunden zuerst speichern.");
-  const c=db.customers.find(x=>x.id===cid.value); if(!c)return;
-  const amount=+purchaseType.value;
-  const date=purchaseDate.value;
-  if(!date)return alert("Kaufdatum auswählen.");
-  c.cards ||= [];
-  c.cards.push({id:uid(),date,amount,type:amount});
-  c.cardType=amount;
-  c.balance += amount;
-  cbalance.value=c.balance;
-  save();
-  alert(`+${amount} Stunden gebucht.`);
+
+  $("cid").value=c?.id||"";
+  $("cname").value=c?.name||"";
+  $("cday").value=c?.day||"Montag";
+  $("ctype").value=c?.type||"Gruppe";
+  $("ccard").value=String(c?.cardType||5);
+  $("cbalance").value=Number(c?.balance)||0;
+  $("purchaseDate").value=new Date().toISOString().slice(0,10);
+  $("purchaseType").value=String(c?.cardType||5);
+  $("customerTitle").textContent=c?"Kunde bearbeiten":"Neuer Kunde";
+
+  renderCardHistory(c);
+  $("customerDialog").showModal();
 }
 
-const dayMap={0:"Sonntag",1:"Montag",2:"Dienstag",3:"Mittwoch",4:"Donnerstag",5:"Freitag",6:"Samstag"};
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
-bookingDate.value=todayISO();
+function renderCardHistory(c){
+  if(!c){
+    $("cardHistory").innerHTML="";
+    return;
+  }
+
+  const cards=[...(c.cards||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+
+  $("cardHistory").innerHTML=cards.length
+    ? "<h3>Gebuchte Karten</h3>"+cards.map(x=>{
+        const amount=Number(x.amount||x.type)||0;
+        return `<div class="history-item"><strong>${amount}er-Karte</strong> Â· ${esc(x.date||"")}</div>`;
+      }).join("")
+    : '<div class="notice">Noch keine Kartenbuchung gespeichert.</div>';
+}
+
+function closeCustomer(){
+  $("customerDialog").close();
+}
+
+function saveCustomer(){
+  const existing=db.customers.find(x=>x.id===$("cid").value);
+
+  const obj={
+    id:existing?.id||uid(),
+    name:$("cname").value.trim(),
+    day:$("cday").value,
+    type:$("ctype").value,
+    cardType:Number($("ccard").value)||5,
+    balance:Number($("cbalance").value)||0,
+    active:true,
+    cards:existing?.cards||[]
+  };
+
+  if(!obj.name) return alert("Bitte Namen eintragen.");
+
+  if(existing){
+    Object.assign(existing,obj);
+  }else{
+    db.customers.push(obj);
+  }
+
+  save();
+  closeCustomer();
+}
+
+function deleteCustomer(){
+  if(!$("cid").value) return closeCustomer();
+  if(!confirm("Kunden wirklich lÃ¶schen?")) return;
+
+  db.customers=db.customers.filter(c=>c.id!==$("cid").value);
+  save();
+  closeCustomer();
+}
+
+function addCard(){
+  if(!$("cid").value) return alert("Bitte den Kunden zuerst speichern.");
+
+  const c=db.customers.find(x=>x.id===$("cid").value);
+  if(!c) return alert("Kunde nicht gefunden.");
+
+  const amount=Number($("purchaseType").value);
+  const date=$("purchaseDate").value;
+
+  if(!date) return alert("Kaufdatum auswÃ¤hlen.");
+
+  c.cards=Array.isArray(c.cards)?c.cards:[];
+
+  const before=Number(c.balance)||0;
+  const after=before+amount;
+
+  c.cards.push({
+    id:uid(),
+    date:date,
+    amount:amount,
+    type:amount,
+    before:before,
+    after:after
+  });
+
+  c.cardType=amount;
+  c.balance=after;
+
+  $("ccard").value=String(amount);
+  $("cbalance").value=String(after);
+
+  save();
+  renderCardHistory(c);
+
+  alert(`${c.name}: +${amount} Stunden gebucht. Neuer Kartenstand: ${after}`);
+}
+
+const dayMap={
+  0:"Sonntag",
+  1:"Montag",
+  2:"Dienstag",
+  3:"Mittwoch",
+  4:"Donnerstag",
+  5:"Freitag",
+  6:"Samstag"
+};
+
+function todayISO(){
+  const d=new Date();
+  return d.toISOString().slice(0,10);
+}
+
+$("bookingDate").value=todayISO();
 
 function renderDay(){
-  const date=bookingDate.value||todayISO();
+  const date=$("bookingDate").value||todayISO();
   const wd=dayMap[new Date(date+"T12:00:00").getDay()];
-  const people=db.customers.filter(c=>c.active!==false && c.day===wd).sort((a,b)=>a.name.localeCompare(b.name));
-  dayList.innerHTML=`<div class="weekday">${wd}</div>` + (people.length?people.map(c=>dayRow(c,date)).join(""):'<div class="notice">Keine Kunden an diesem Tag.</div>');
+
+  const people=db.customers
+    .filter(c=>c.active!==false && c.day===wd)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+
+  $("dayList").innerHTML=
+    `<div class="weekday">${wd}</div>`+
+    (people.length
+      ? people.map(c=>dayRow(c,date)).join("")
+      : '<div class="notice">Keine Kunden an diesem Tag.</div>');
 }
+
 function dayRow(c,date){
   const b=db.bookings.find(x=>x.customerId===c.id && x.date===date);
-  const statuses=["Geritten","Rechtzeitig abgesagt","Zu spät abgesagt","Unentschuldigt","Urlaub Reitschule","G – geschlossen"];
+  const statuses=[
+    "Geritten",
+    "Rechtzeitig abgesagt",
+    "Zu spÃ¤t abgesagt",
+    "Unentschuldigt",
+    "Urlaub Reitschule",
+    "G â geschlossen"
+  ];
+
   return `<div class="person" style="display:block;margin-bottom:8px">
     <div class="statusline">
-      <div><div class="name">${esc(c.name)} <span class="badge">${c.balance} Std.</span></div><div class="meta">${esc(c.type)} · ${c.cardType}er-Karte</div></div>
+      <div>
+        <div class="name">${esc(c.name)} <span class="badge">${Number(c.balance)||0} Std.</span></div>
+        <div class="meta">${esc(c.type)} Â· ${Number(c.cardType)||5}er-Karte</div>
+      </div>
       <select onchange="bookStatus('${c.id}','${date}',this.value)">
-        <option value="">${b?"Gespeichert: "+b.status:"Status wählen…"}</option>
+        <option value="">${b?"Gespeichert: "+b.status:"Status wÃ¤hlenâ¦"}</option>
         ${statuses.map(s=>`<option ${b?.status===s?"selected":""}>${s}</option>`).join("")}
       </select>
     </div>
-    ${b?`<div class="notice" style="margin-top:6px">Gebucht: ${b.before} → ${b.after}. Änderung möglich; die alte Buchung wird zuerst zurückgerechnet.</div>`:""}
+    ${b?`<div class="notice" style="margin-top:6px">Gebucht: ${b.before} â ${b.after}. Ãnderung mÃ¶glich; die alte Buchung wird zuerst zurÃ¼ckgerechnet.</div>`:""}
   </div>`;
 }
-function isSpecial(c){ return ["Erwachsene","Mutter-Kind","Behindertenreiten"].includes(c.type); }
+
+function isSpecial(c){
+  return ["Erwachsene","Mutter-Kind","Behindertenreiten"].includes(c.type);
+}
+
 function currentCardStart(c,date){
-  const cards=(c.cards||[]).filter(x=>x.date<=date).sort((a,b)=>a.date.localeCompare(b.date));
+  const cards=(c.cards||[])
+    .filter(x=>x.date<=date)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
   return cards.length?cards[cards.length-1].date:null;
 }
+
 function freeQuota(c,date){
-  const cards=(c.cards||[]).filter(x=>x.date<=date).sort((a,b)=>a.date.localeCompare(b.date));
+  const cards=(c.cards||[])
+    .filter(x=>x.date<=date)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
   const last=cards[cards.length-1];
-  const type=last?.type||c.cardType||5;
+  const type=Number(last?.type||c.cardType||5);
+
   return type===10?2:1;
 }
+
 function usedFree(c,date){
   const start=currentCardStart(c,date);
-  return db.bookings.filter(b=>b.customerId===c.id && b.date<date && (!start||b.date>=start) && b.status==="Rechtzeitig abgesagt" && b.delta===0).length;
+
+  return db.bookings.filter(b=>
+    b.customerId===c.id &&
+    b.date<date &&
+    (!start||b.date>=start) &&
+    b.status==="Rechtzeitig abgesagt" &&
+    Number(b.delta)===0
+  ).length;
 }
+
 function computeDelta(c,status,date,before){
-  if(status==="G – geschlossen") return 0;
+  if(status==="G â geschlossen") return 0;
+
   if(status==="Rechtzeitig abgesagt"){
-    if(isSpecial(c) && before>=1 && usedFree(c,date)<freeQuota(c,date)) return 0;
+    if(isSpecial(c) && before>=1 && usedFree(c,date)<freeQuota(c,date)){
+      return 0;
+    }
     return -1;
   }
+
   return -1;
 }
+
 function bookStatus(customerId,date,status){
-  if(!status)return;
-  const c=db.customers.find(x=>x.id===customerId); if(!c)return;
+  if(!status) return;
+
+  const c=db.customers.find(x=>x.id===customerId);
+  if(!c) return;
+
   const existing=db.bookings.find(x=>x.customerId===customerId && x.date===date);
+
   if(existing){
-    c.balance -= existing.delta; // rollback previous effect
+    c.balance=(Number(c.balance)||0)-Number(existing.delta||0);
     db.bookings=db.bookings.filter(x=>x.id!==existing.id);
   }
-  const before=c.balance;
+
+  const before=Number(c.balance)||0;
   const delta=computeDelta(c,status,date,before);
-  c.balance += delta;
-  db.bookings.push({id:uid(),customerId,date,status,before,after:c.balance,delta});
+
+  c.balance=before+delta;
+
+  db.bookings.push({
+    id:uid(),
+    customerId:customerId,
+    date:date,
+    status:status,
+    before:before,
+    after:c.balance,
+    delta:delta
+  });
+
   save();
 }
 
 function exportData(){
   const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`tinker-backup-${todayISO()}.json`; a.click(); URL.revokeObjectURL(a.href);
+  const a=document.createElement("a");
+
+  a.href=URL.createObjectURL(blob);
+  a.download=`tinker-backup-${todayISO()}.json`;
+  a.click();
+
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
+
 function importData(e){
-  const f=e.target.files[0]; if(!f)return;
+  const f=e.target.files[0];
+  if(!f) return;
+
   const r=new FileReader();
-  r.onload=()=>{ try{ const x=JSON.parse(r.result); if(!x.customers||!x.bookings)throw 0; db=x; save(); alert("Backup eingelesen."); }catch{alert("Die Datei ist kein gültiges Tinker-Backup.");}};
+
+  r.onload=()=>{
+    try{
+      const x=JSON.parse(r.result);
+
+      if(!x.customers||!x.bookings) throw 0;
+
+      db=x;
+      save();
+      alert("Backup eingelesen.");
+    }catch{
+      alert("Die Datei ist kein gÃ¼ltiges Tinker-Backup.");
+    }
+  };
+
   r.readAsText(f);
 }
-function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g,m=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[m]));
+}
 
 renderAll();
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>
