@@ -45,7 +45,7 @@
     label{font-size:12px;color:var(--muted);display:block;margin:8px 0 5px}
     .row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
     .list{display:flex;flex-direction:column;gap:9px}
-    .person{background:white;border:1px solid #eadfd4;border-radius:15px;padding:12px;display:flex;align-items:center;gap:12px}
+    .person{background:white;border:1px solid #eadfd4;border-radius:15px;padding:12px;display:flex;align-items:center;gap:12px}.person.booked{background:#eaf4ed;border-color:#b9d6c0}.day-progress{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:#eef3f5;color:var(--blue);font-weight:700;font-size:13px}
     .person .name{font-weight:700}.person .meta{font-size:12px;color:var(--muted);margin-top:2px}
     .balance{margin-left:auto;min-width:44px;text-align:center;font-size:20px;font-weight:800}
     .b2{color:var(--orange)} .b1,.b0{color:var(--red)} .bok{color:var(--green)}
@@ -101,6 +101,7 @@
     <label>Datum</label>
     <input id="bookingDate" type="date" onchange="renderDay()">
     <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt geÃ¤ndert werden.</p>
+    <div id="dayProgress" class="day-progress">0 von 0 Terminen gebucht</div>
     <div id="dayList"></div>
   </div>
 </section>
@@ -438,6 +439,12 @@ function renderDay(){
     .filter(c=>c.active!==false && c.day===wd)
     .sort((a,b)=>a.name.localeCompare(b.name));
 
+  const bookedCount=people.filter(c=>
+    db.bookings.some(b=>b.customerId===c.id && b.date===date)
+  ).length;
+
+  $("dayProgress").textContent=`${bookedCount} von ${people.length} Terminen gebucht`;
+
   $("dayList").innerHTML=
     `<div class="weekday">${wd}</div>`+
     (people.length
@@ -456,10 +463,10 @@ function dayRow(c,date){
     "G â geschlossen"
   ];
 
-  return `<div class="person" style="display:block;margin-bottom:8px">
+  return `<div class="person ${b?"booked":""}" style="display:block;margin-bottom:8px">
     <div class="statusline">
       <div>
-        <div class="name">${esc(c.name)} <span class="badge">${Number(c.balance)||0} Std.</span></div>
+        <div class="name">${esc(c.name)} ${b?'<span class="badge">â gebucht</span>':""} <span class="badge">${Number(c.balance)||0} Std.</span></div>
         <div class="meta">${esc(c.type)} Â· ${Number(c.cardType)||5}er-Karte</div>
       </div>
       <select onchange="bookStatus('${c.id}','${date}',this.value)">
@@ -467,7 +474,7 @@ function dayRow(c,date){
         ${statuses.map(s=>`<option ${b?.status===s?"selected":""}>${s}</option>`).join("")}
       </select>
     </div>
-    ${b?`<div class="notice" style="margin-top:6px">Gebucht: ${b.before} â ${b.after}. Ãnderung mÃ¶glich; die alte Buchung wird zuerst zurÃ¼ckgerechnet.</div>`:""}
+    ${b?`<div class="notice" style="margin-top:6px"><strong>â Erledigt.</strong> Gebucht: ${b.before} â ${b.after}. Ãnderung mÃ¶glich; die alte Buchung wird zuerst zurÃ¼ckgerechnet.</div>`:""}
   </div>`;
 }
 
