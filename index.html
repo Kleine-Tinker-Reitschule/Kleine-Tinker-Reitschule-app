@@ -90,7 +90,7 @@
 <section id="customers" class="hidden">
   <div class="panel">
     <div class="row"><div><h2>Kunden</h2></div><button class="primary" onclick="openCustomer()">+ Kunde</button></div>
-    <input id="search" placeholder="Name suchenâ¦" oninput="renderCustomers()">
+    <input id="search" placeholder="Name suchen&hellip;" oninput="renderCustomers()">
     <div id="customerList" class="list" style="margin-top:12px"></div>
   </div>
 </section>
@@ -100,7 +100,7 @@
     <h2>Tagesbuchung</h2>
     <label>Datum</label>
     <input id="bookingDate" type="date" onchange="renderDay()">
-    <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt geÃ¤ndert werden.</p>
+    <p class="notice">Ein Termin kann pro Kunde und Datum nur einmal gebucht werden. Ein bereits gespeicherter Status wird angezeigt und kann gezielt ge&auml;ndert werden.</p>
     <div id="dayProgress" class="day-progress">0 von 0 Terminen gebucht</div>
     <div id="dayList"></div>
   </div>
@@ -109,7 +109,7 @@
 <section id="backup" class="hidden">
   <div class="panel">
     <h2>Sicherung</h2>
-    <p class="notice">Die Daten liegen lokal auf diesem GerÃ¤t. Exportiere regelmÃ¤Ãig eine Sicherungsdatei.</p>
+    <p class="notice">Die Daten liegen lokal auf diesem Ger&auml;t. Exportiere regelm&auml;&szlig;ig eine Sicherungsdatei.</p>
     <div class="toolbar">
       <button class="primary" onclick="exportData()">Backup herunterladen</button>
       <button class="secondary" onclick="document.getElementById('importFile').click()">Backup einlesen</button>
@@ -148,12 +148,12 @@
       <div><label>Kaufdatum</label><input id="purchaseDate" type="date"></div>
       <div><label>Karte</label><select id="purchaseType"><option value="5">5er-Karte</option><option value="10">10er-Karte</option></select></div>
     </div>
-    <button class="secondary" style="width:100%;margin-top:8px" onclick="addCard()">Karte hinzufÃ¼gen</button>
+    <button class="secondary" style="width:100%;margin-top:8px" onclick="addCard()">Karte hinzuf&uuml;gen</button>
 
     <div id="cardHistory" class="history"></div>
 
     <div class="actions">
-      <button class="danger" onclick="deleteCustomer()">LÃ¶schen</button>
+      <button class="danger" onclick="deleteCustomer()">L&ouml;schen</button>
       <button class="secondary" onclick="closeCustomer()">Abbrechen</button>
       <button class="primary" onclick="saveCustomer()">Speichern</button>
     </div>
@@ -370,7 +370,7 @@ function saveCustomer(){
 
 function deleteCustomer(){
   if(!$("cid").value) return closeCustomer();
-  if(!confirm("Kunden wirklich lÃ¶schen?")) return;
+  if(!confirm("Kunden wirklich l\u00f6schen?")) return;
 
   db.customers=db.customers.filter(c=>c.id!==$("cid").value);
   save();
@@ -386,7 +386,7 @@ function addCard(){
   const amount=Number($("purchaseType").value);
   const date=$("purchaseDate").value;
 
-  if(!date) return alert("Kaufdatum auswÃ¤hlen.");
+  if(!date) return alert("Kaufdatum ausw\u00e4hlen.");
 
   c.cards=Array.isArray(c.cards)?c.cards:[];
 
@@ -457,24 +457,24 @@ function dayRow(c,date){
   const statuses=[
     "Geritten",
     "Rechtzeitig abgesagt",
-    "Zu spÃ¤t abgesagt",
+    "Zu sp\u00e4t abgesagt",
     "Unentschuldigt",
     "Urlaub Reitschule",
-    "G â geschlossen"
+    "G \u2013 geschlossen"
   ];
 
   return `<div class="person ${b?"booked":""}" style="display:block;margin-bottom:8px">
     <div class="statusline">
       <div>
-        <div class="name">${esc(c.name)} ${b?'<span class="badge">â gebucht</span>':""} <span class="badge">${Number(c.balance)||0} Std.</span></div>
+        <div class="name">${esc(c.name)} ${b?'<span class="badge">\u2713 gebucht</span>':""} <span class="badge">${Number(c.balance)||0} Std.</span></div>
         <div class="meta">${esc(c.type)} Â· ${Number(c.cardType)||5}er-Karte</div>
       </div>
       <select onchange="bookStatus('${c.id}','${date}',this.value)">
-        <option value="">${b?"Gespeichert: "+b.status:"Status wÃ¤hlenâ¦"}</option>
+        <option value="">${b?"Gespeichert: "+b.status:"Status w\u00e4hlen\u2026"}</option>
         ${statuses.map(s=>`<option ${b?.status===s?"selected":""}>${s}</option>`).join("")}
       </select>
     </div>
-    ${b?`<div class="notice" style="margin-top:6px"><strong>â Erledigt.</strong> Gebucht: ${b.before} â ${b.after}. Ãnderung mÃ¶glich; die alte Buchung wird zuerst zurÃ¼ckgerechnet.</div>`:""}
+    ${b?`<div class="notice" style="margin-top:6px"><strong>\u2713 Erledigt.</strong> Gebucht: ${b.before} \u2192 ${b.after}. \u00c4nderung m\u00f6glich; die alte Buchung wird zuerst zur\u00fcckgerechnet.</div>`:""}
   </div>`;
 }
 
@@ -514,7 +514,7 @@ function usedFree(c,date){
 }
 
 function computeDelta(c,status,date,before){
-  if(status==="G â geschlossen") return 0;
+  if(status==="G \u2013 geschlossen") return 0;
 
   if(status==="Rechtzeitig abgesagt"){
     if(isSpecial(c) && before>=1 && usedFree(c,date)<freeQuota(c,date)){
@@ -584,7 +584,7 @@ function importData(e){
       save();
       alert("Backup eingelesen.");
     }catch{
-      alert("Die Datei ist kein gÃ¼ltiges Tinker-Backup.");
+      alert("Die Datei ist kein g\u00fcltiges Tinker-Backup.");
     }
   };
 
